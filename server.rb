@@ -2,11 +2,12 @@ require 'sinatra'
 
 # v1 curl "localhost:4567/?firstname=erik&what=modest"
 # v2 curl "localhost:4567/?first_name=erik&what=modest" (firstname -> first_name)
-# v3 curl "localhost:4567/?first_name=erik&what=modest" (what -> is)
+# v3 curl "localhost:4567/?first_name=erik&is=awesome" (what -> is)
 get '/' do
   updated_request = versioned_request(request)
 
-  response_body = "#{updated_request.params['first_name']} is #{updated_request.params['what']}"
+  # Whatever Business Logic
+  response_body = "#{updated_request.params['first_name']} is #{updated_request.params['is']}"
 
   versioned_response_body(response_body)
 end
@@ -46,10 +47,19 @@ module Changes
     end
   end
 
+  # RenameRequestParamFromWhatToIs
+  class RenameRequestParamFromWhatToIs < AbstractRequest
+    def call
+      request.params.merge('is' => request.params['what'])
+      request.params.delete('what')
+      request
+    end
+  end
+
   BY_ENDPOINT = {
     'GET_/' => [
-      RenameRequestParamFromFirstnameToFirstName
-      # RenameRequestParamFromWhatToIs
+      RenameRequestParamFromFirstnameToFirstName,
+      RenameRequestParamFromWhatToIs
     ]
   }
 end
