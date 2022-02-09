@@ -43,30 +43,39 @@ module Changes
       @request = request
     end
 
-    def call; end
+    def call
+      apply
+      puts "call #{request.class}"
+      request
+    end
 
     private
+
+    def apply
+      raise NotImplementedError
+    end
+
+    # TODO: use composition instead of helper methods
+    def rename_request_param(from:, to:)
+      request.params.merge!(to => request.params[from])
+      request.params.delete(from)
+      puts "rename_request_param #{request.params.inspect}"
+    end
 
     attr_reader :request
   end
 
   # RenameRequestParamFromFirstnameToFirstName
   class RenameRequestParamFromFirstnameToFirstName < AbstractRequest
-    def call
-      puts "RenameRequestParamFromFirstnameToFirstName: #{request.params}"
-      request.params.merge!('first_name' => request.params['firstname'])
-      request.params.delete('firstname')
-      puts "RenameRequestParamFromFirstnameToFirstName: #{request.params}"
-      request
+    def apply
+      rename_request_param(from: 'firstname', to: 'first_name')
     end
   end
 
   # RenameRequestParamFromWhatToIs
   class RenameRequestParamFromWhatToIs < AbstractRequest
-    def call
-      request.params.merge!('is' => request.params['what'])
-      request.params.delete('what')
-      request
+    def apply
+      rename_request_param(from: 'what', to: 'is')
     end
   end
 end
