@@ -15,30 +15,32 @@ end
 
 # VERSIONING LOGIC
 
-def versioned_request(request)
-  version_changes(request.env).flatten.reduce(request) do |_, change_class|
-    change_class.new(request).call
-  end
-end
-
 def versioned_response_body(response_body)
   response_body # TODO:
 end
 
-def relevant_versions(headers)
-  request_version = headers['HTTP_X_ZENDESKAPI_VERSION']
-  sorted_versions = VersionChanges::VERSIONS.sort.map { |k, _| k }
-  first_change = sorted_versions.index(request_version) + 1
-
-  sorted_versions[first_change..-1]
+# @return request, altered as if sent by the latest version
+def versioned_request(request)
+  relevant_changes(request.env).reduce request do |_, change_class|
+    change_class.new(request).call
+  end
 end
 
-def version_changes(headers)
-  VersionChanges::VERSIONS.slice(*relevant_versions(headers)).values
+# Changes required to update the request from the user version to the latest
+def relevant_changes(headers)
+  VersionChanges::VERSIONS.slice(*relevant_versions(headers))
+    .sort.flat_map { |_k, v| v }
+end
+
+# Versions between the user request and the latest
+def relevant_versions(headers)
+  request_version = headers['HTTP_X_ZENDESKAPI_VERSION']
+  sorted_versions = VersionChanges::VERSIONS.keys.sort
+  first_change_index = sorted_versions.index(request_version) + 1
+  sorted_versions[first_change_index..-1]
 end
 
 module Changes
-  # Implement me in subclasses
   class AbstractRequest
     def initialize(request)
       @request = request
@@ -84,6 +86,7 @@ module Changes
 end
 
 class VersionChanges
+  # TODO? how to nest verb/path (eg "GET /")
   VERSIONS = {
     '2020' => [],
     '2021' => [Changes::RenameRequestParamFromFirstnameToFirstName],
